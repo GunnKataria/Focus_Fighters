@@ -1,8 +1,10 @@
+import { PhoneStatusBadge, PhoneStatusIndicator } from './PhoneStatusBadge';
 export default function PlayerCard({
   player,
   status = "focused",
   showHost = false,
   compact = false,
+  phoneStatus,
 }) {
   const borderColor = {
     focused: "rgba(82,224,122,.35)",
@@ -79,7 +81,7 @@ export default function PlayerCard({
           {statusLabel}
         </span>
       )}
-      {showHost && (
+     {showHost && (
         <span
           style={{
             fontFamily: "var(--font-heading)",
@@ -91,6 +93,21 @@ export default function PlayerCard({
         >
           HOST
         </span>
+      )}
+
+      {/* ── Phone Controller Badge ── */}
+      {phoneStatus?.isLockedIn !== null && phoneStatus !== undefined && (
+        <div style={{ marginTop: ".15rem", width: "100%", display: "flex", justifyContent: "center" }}>
+          {compact ? (
+            <PhoneStatusIndicator isLockedIn={phoneStatus.isLockedIn} size="md" />
+          ) : (
+            <PhoneStatusBadge 
+              isLockedIn={phoneStatus.isLockedIn} 
+              appSwitchCount={phoneStatus.appSwitchCount}
+              compact={true}
+            />
+          )}
+        </div>
       )}
     </div>
   );

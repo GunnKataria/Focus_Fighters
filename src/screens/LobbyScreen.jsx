@@ -10,6 +10,9 @@ import { RuneDivider, Label, SectionTitle } from "../components/ui/Typography";
 import PlayerCard from "../components/game/PlayerCard";
 import FriendsPanel from "../components/game/FriendsPanel";
 import InviteBanner from "../components/game/InviteBanner";
+import PhoneJailQRCode from "../components/game/PhoneJailQRCode";
+import { PhoneStatusIndicator } from "../components/game/PhoneStatusBadge";
+import { usePhoneStatusListener } from "../hooks/usePhoneStatusListener";
 
 export default function LobbyScreen({ player, onUpdatePlayer, onStartRaid }) {
   const { push, multiplayer } = useApp();
@@ -20,6 +23,12 @@ export default function LobbyScreen({ player, onUpdatePlayer, onStartRaid }) {
     removeFriend, createLiveRoom, joinLiveRoomByCode, leaveLiveRoom,
     startLiveRoom, inviteFriend, acceptInvite, declineInvite,
   } = multiplayer;
+
+  // ── Phone Controller State ──
+  // PhoneJailQRCode component creates the session itself.
+  // Do NOT also call usePhoneJailSession here — it would create a duplicate
+  // session and overwrite the QR code token, breaking the phone link.
+  const { getPhoneStatus } = usePhoneStatusListener(liveRoom?.id);
 
   // ── Room form state ──────────────────────────────────────────
   const [roomName, setRoomName] = useState("");
@@ -80,18 +89,18 @@ export default function LobbyScreen({ player, onUpdatePlayer, onStartRaid }) {
 
   // ── Room handlers ─────────────────────────────────────────────
   const handleCreateRoom = async () => {
-  console.log("[UI] handleCreateRoom called");
-  const room = await createLiveRoom({
-    name: roomName || "Study Session",
-    duration,
-    boss: bossType,
-  });
-  if (room) {
-    push(`Room created! Code: ${room.code}`, "success");
-  } else {
-    push("⚠️ Failed to create room — try again", "danger");
-  }
-};
+    console.log("[UI] handleCreateRoom called");
+    const room = await createLiveRoom({
+      name: roomName || "Study Session",
+      duration,
+      boss: bossType,
+    });
+    if (room) {
+      push(`Room created! Code: ${room.code}`, "success");
+    } else {
+      push("⚠️ Failed to create room — try again", "danger");
+    }
+  };
   const handleJoinRoom = async (codeOverride) => {
     const code = codeOverride || joinCode;
     if (!code.trim()) return;
@@ -279,6 +288,11 @@ export default function LobbyScreen({ player, onUpdatePlayer, onStartRaid }) {
 
                 <RuneDivider />
 
+                {/* ── Phone Controller Link ── */}
+                <div style={{ display: "flex", justifyContent: "center", margin: "1.5rem 0" }}>
+                  <PhoneJailQRCode roomId={liveRoom.id} />
+                </div>
+
                 {/* Live squad list */}
                 <div style={{ marginTop: "1rem" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: ".75rem" }}>
@@ -304,6 +318,12 @@ export default function LobbyScreen({ player, onUpdatePlayer, onStartRaid }) {
                         <div style={{ fontFamily: "var(--font-heading)", fontSize: ".6rem", color: "var(--text-muted)" }}>
                           {m.device === "mobile" ? "📱" : "💻"}
                         </div>
+                        {/* ── ADD THIS: Phone Status Badge ── */}
+                        {getPhoneStatus(m.user_id)?.isLockedIn !== null && (
+                          <div style={{ position: "absolute", top: -8, left: -8, zIndex: 10 }}>
+                            <PhoneStatusIndicator isLockedIn={getPhoneStatus(m.user_id).isLockedIn} size="sm" />
+                          </div>
+                        )}
                         {/* Host badge */}
                         {m.user_id === liveRoom.host_id && (
                           <div style={{ position: "absolute", top: -6, right: -6, background: "var(--accent-gold)", color: "#1a1200", borderRadius: 10, padding: ".1rem .4rem", fontFamily: "var(--font-heading)", fontSize: ".55rem", fontWeight: 700 }}>HOST</div>

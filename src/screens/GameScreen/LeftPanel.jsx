@@ -3,6 +3,7 @@ import Btn from "../../components/ui/Btn";
 import { Label, SectionTitle, RuneDivider } from "../../components/ui/Typography";
 import { BOSS_NAMES } from "../../constants";
 import { formatTime } from "../../utils/formatTime";
+import { PhoneStatusIndicator } from "../../components/game/PhoneStatusBadge";
 
 export default function LeftPanel({
   room,
@@ -208,8 +209,11 @@ export default function LeftPanel({
                 <div style={{ fontFamily: "var(--font-heading)", fontSize: ".72rem" }}>
                   {p.name}
                 </div>
-                <div
+               <div
                   style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: ".4rem",
                     fontFamily: "var(--font-heading)",
                     fontSize: ".58rem",
                     color:
@@ -220,11 +224,18 @@ export default function LeftPanel({
                           : "var(--accent-gold)",
                   }}
                 >
-                  {p.status === "focused"
-                    ? "🟢 Focused"
-                    : p.status === "distracted"
-                      ? "🔴 Distracted"
-                      : "🟡 Warning"}
+                  <span>
+                    {p.status === "focused"
+                      ? "🟢 Focused"
+                      : p.status === "distracted"
+                        ? "🔴 Distracted"
+                        : "🟡 Warning"}
+                  </span>
+                  
+                  {/* ── Phone Controller Indicator ── */}
+                  {p.phoneStatus?.isLockedIn !== null && p.phoneStatus !== undefined && (
+                    <PhoneStatusIndicator isLockedIn={p.phoneStatus.isLockedIn} size="sm" />
+                  )}
                 </div>
               </div>
             </div>

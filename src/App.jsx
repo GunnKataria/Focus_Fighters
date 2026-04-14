@@ -8,17 +8,24 @@ import NotifContainer from "./components/layout/NotifContainer";
 import LoginScreen from "./screens/LoginScreen";
 import LobbyScreen from "./screens/LobbyScreen";
 import GameScreen from "./screens/GameScreen";
+// Step 1: Import the new mobile controller screen
+import MobileControllerScreen from "./screens/MobileControllerScreen";
 
 function AppInner() {
   const { notifs, push } = useNotifications();
   const { authLoading, isLoggedIn, profile, signOut } = useAuth();
-  // Hoisted here (not inside LobbyScreen) so liveRoom / liveMembers / channels
-  // survive navigation Lobby → Game. Previously the hook unmounted with
-  // LobbyScreen, tearing down the realtime channel and dropping shared state.
+  
   const multiplayer = useMultiplayer(profile);
 
-  const [screen, setScreen]       = useState("login");
-  const [player, setPlayer]       = useState(null);
+  // Initialize state based on the URL path to handle direct QR code scans
+  const [screen, setScreen] = useState(() => {
+    if (window.location.href.includes("phone-controller")) {
+      return "phone-controller";
+    }
+    return "login";
+  });
+  
+  const [player, setPlayer] = useState(null);
   const [activeRoom, setActiveRoom] = useState(null);
 
   // ── Sync player state from profile ──────────────────────────
@@ -37,15 +44,26 @@ function AppInner() {
         xpToNext: profile.xp_to_next ?? 100,
         isGuest:  profile.is_guest  ?? false,
       });
-      setScreen(s => s === "login" ? "lobby" : s);
-      if (screen === "login") {
-        push(`Welcome, ${profile.display_name?.split(" ")[0]}! ⚔️`, "success");
+
+      // Check if the user arrived via a phone controller URL
+      if (window.location.href.includes("phone-controller")) {
+        setScreen("phone-controller");
+      } else {
+        setScreen(s => s === "login" ? "lobby" : s);
+        if (screen === "login") {
+          push(`Welcome, ${profile.display_name?.split(" ")[0]}! ⚔️`, "success");
+        }
       }
     } else if (!isLoggedIn) {
-      setScreen("login");
-      setPlayer(null);
+      // Bouncer exception: Let anonymous phones straight into the jailer!
+      if (window.location.href.includes("phone-controller")) {
+        setScreen("phone-controller");
+      } else {
+        setScreen("login");
+        setPlayer(null);
+      }
     }
-  }, [isLoggedIn, profile, authLoading]);
+  }, [isLoggedIn, profile, authLoading, push, screen]);
 
   const handleStartRaid = (room) => { setActiveRoom(room); setScreen("game"); };
   const handleGoLobby   = () => { setScreen("lobby"); setActiveRoom(null); };
@@ -69,6 +87,9 @@ function AppInner() {
         {screen === "login"  && <LoginScreen />}
         {screen === "lobby"  && player && <LobbyScreen player={player} onUpdatePlayer={setPlayer} onStartRaid={handleStartRaid} />}
         {screen === "game"   && player && <GameScreen  player={player} room={activeRoom} onUpdatePlayer={setPlayer} onGoLobby={handleGoLobby} />}
+        
+        {/* Step 1: Render the new screen */}
+        {screen === "phone-controller" && <MobileControllerScreen />}
 
         <NotifContainer notifs={notifs} />
       </div>

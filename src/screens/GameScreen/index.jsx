@@ -13,12 +13,15 @@ import StudyTab from "./tabs/StudyTab";
 import FlashcardTab from "./tabs/FlashcardTab";
 import NotesTab from "./tabs/NotesTab";
 import AiTab from "./tabs/AiTab";
+import { usePhoneStatusListener } from "../../hooks/usePhoneStatusListener";
 
 export default function GameScreen({ player, room, onUpdatePlayer, onGoLobby }) {
   const { push, multiplayer } = useApp();
   const { profile } = useAuth();
   const liveMembers = multiplayer?.liveMembers ?? [];
   const liveRoom    = multiplayer?.liveRoom ?? room;
+  // ── Phone Controller State ──
+  const { getPhoneStatus } = usePhoneStatusListener(liveRoom?.id);
 
   // Derive squad from real room members (everyone except self). Falls back
   // to DEMO_SQUAD only when there's no multiplayer room (solo dev runs).
@@ -431,8 +434,15 @@ export default function GameScreen({ player, room, onUpdatePlayer, onGoLobby }) 
     (focused ? 2 : 0);
 
   const allPlayers = [
-    { ...player, status: focused ? "focused" : "distracted" },
-    ...squad,
+    { 
+      ...player, 
+      status: focused ? "focused" : "distracted",
+      phoneStatus: getPhoneStatus(profile?.id) 
+    },
+    ...squad.map(member => ({
+      ...member,
+      phoneStatus: getPhoneStatus(member.id)
+    })),
   ];
 
   // ── Render ────────────────────────────────────────────────

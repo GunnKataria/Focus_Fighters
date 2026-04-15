@@ -21,6 +21,10 @@ export default function LeftPanel({
   focusStreak,
   focused,
   onToggleFocus,
+  bossClass,
+  bossDisplay,
+  bossState,
+  strictFocused,
 }) {
   return (
     <aside
@@ -57,16 +61,44 @@ export default function LeftPanel({
           }}
           className="expand-ring"
         />
+       {/* Boss state label - Wrapped in a fixed height container to prevent layout shift */}
+        <div style={{ minHeight: "1rem", marginBottom: ".3rem" }}>
+          <div style={{
+            fontFamily: "var(--font-heading)",
+            fontSize: ".65rem",
+            letterSpacing: ".1em",
+            textTransform: "uppercase",
+            color: bossState === "defeated" ? "var(--text-muted)"
+              : bossState === "enraged" ? "var(--accent-red)"
+              : bossState === "hurt" ? "var(--accent-gold)"
+              : "var(--accent-red)",
+            opacity: bossState && bossState !== "idle" ? 0.9 : 0,
+            transition: "opacity 0.2s ease",
+          }}>
+            {bossState === "defeated" ? "💀 DEFEATED"
+              : bossState === "enraged" ? "😡 ENRAGED"
+              : bossState === "hurt" ? "💢 TAKING DAMAGE"
+              : bossState === "roar" ? "😤 COUNTER-ATTACK"
+              : ""}
+          </div>
+        </div>
         <div
           style={{
             fontSize: "4.5rem",
-            filter: "drop-shadow(0 0 18px rgba(224,57,90,.6))",
+            filter: bossState === "defeated"
+              ? "grayscale(1) opacity(0.5)"
+              : bossState === "enraged"
+                ? "drop-shadow(0 0 28px rgba(224,57,90,1)) saturate(2)"
+                : bossState === "hurt"
+                  ? "drop-shadow(0 0 24px rgba(255,200,0,.9)) brightness(1.5)"
+                  : "drop-shadow(0 0 18px rgba(224,57,90,.6))",
             display: "inline-block",
             position: "relative",
+            transition: "filter .2s",
           }}
-          className={`boss-idle ${bossShaking ? "boss-attacking" : ""}`}
+          className={bossClass || "boss-idle"}
         >
-          {room?.boss || "🐲"}
+          {bossDisplay || room?.boss || "🐲"}
           {damageNums.map((d) => (
             <div
               key={d.id}
@@ -137,7 +169,33 @@ export default function LeftPanel({
 
       <RuneDivider glyph="⚔" />
 
-      {/* Room code share */}
+      {/* Strict Focus Lock indicator */}
+      <div
+        style={{
+          padding: ".5rem .75rem",
+          borderRadius: 8,
+          background: strictFocused
+            ? "rgba(82,224,122,.1)"
+            : "rgba(224,57,90,.1)",
+          border: `1px solid ${strictFocused ? "rgba(82,224,122,.35)" : "rgba(224,57,90,.35)"}`,
+          textAlign: "center",
+        }}
+      >
+        <div style={{
+          fontFamily: "var(--font-heading)",
+          fontSize: ".72rem",
+          letterSpacing: ".06em",
+          color: strictFocused ? "var(--accent-green)" : "var(--accent-red)",
+          marginBottom: ".3rem",
+        }}>
+          {strictFocused ? "⚔️ DEALING DAMAGE" : "⛔ DAMAGE LOCKED"}
+        </div>
+        <div style={{ fontSize: ".62rem", color: "var(--text-muted)", lineHeight: 1.5 }}>
+          {strictFocused
+            ? "100% squad focused + phones locked"
+            : "Need 100% squad focus + all phones in jail"}
+        </div>
+      </div>
       {room?.code && (
         <div
           style={{

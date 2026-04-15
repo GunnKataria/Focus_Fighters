@@ -64,8 +64,17 @@ body {
 @keyframes timer-pulse { 0%,100%{box-shadow:0 0 20px rgba(245,200,66,.5)} 50%{box-shadow:0 0 30px rgba(245,200,66,.9)} }
 @keyframes pdot-glow { 0%,100%{box-shadow:none} 50%{box-shadow:0 0 6px var(--accent-gold)} }
 
+@keyframes fullscreen-pulse { 0%,100%{border-color:rgba(224,57,90,.4);box-shadow:0 0 20px rgba(224,57,90,.2)} 50%{border-color:rgba(224,57,90,.9);box-shadow:0 0 50px rgba(224,57,90,.5)} }
+@keyframes boss-hurt { 0%{filter:drop-shadow(0 0 18px rgba(224,57,90,.6))} 20%{filter:drop-shadow(0 0 40px rgba(255,255,255,1)) brightness(2)} 50%{filter:drop-shadow(0 0 30px rgba(224,57,90,.9)) brightness(1.5)} 100%{filter:drop-shadow(0 0 18px rgba(224,57,90,.6))} }
+@keyframes boss-defeated { 0%{transform:scale(1) rotate(0deg);opacity:1} 30%{transform:scale(1.4) rotate(-15deg);opacity:.8} 60%{transform:scale(.5) rotate(30deg);opacity:.4} 100%{transform:scale(0) rotate(45deg);opacity:0} }
+@keyframes boss-roar { 0%,100%{transform:scale(1)} 25%{transform:scale(1.15) rotate(-3deg)} 50%{transform:scale(1.2) rotate(3deg)} 75%{transform:scale(1.1) rotate(-2deg)} }
+@keyframes fullscreen-pulse { 0%,100%{border-color:rgba(224,57,90,.5)} 50%{border-color:rgba(224,57,90,1)} }
+
 .boss-idle { animation: boss-idle 3s ease-in-out infinite; }
 .boss-attacking { animation: boss-atk .5s ease; }
+.boss-hurt { animation: boss-hurt .8s ease; }
+.boss-defeated { animation: boss-defeated 1.2s ease forwards; }
+.boss-roar { animation: boss-roar .6s ease; }
 .ring-pulse { animation: ring-pulse 2s ease-in-out infinite; }
 .expand-ring { animation: expand-ring 3s ease-out infinite; }
 .hp-shake { animation: hp-shake .4s ease; }

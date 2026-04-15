@@ -12,11 +12,21 @@ import FriendsPanel from "../components/game/FriendsPanel";
 import InviteBanner from "../components/game/InviteBanner";
 import PhoneJailQRCode from "../components/game/PhoneJailQRCode";
 import { PhoneStatusIndicator } from "../components/game/PhoneStatusBadge";
+import ShopPanel from "../components/shop/ShopPanel";
+import HistoryModal from "../components/history/HistoryModal";
 import { usePhoneStatusListener } from "../hooks/usePhoneStatusListener";
 
 export default function LobbyScreen({ player, onUpdatePlayer, onStartRaid }) {
   const { push, multiplayer } = useApp();
-  const { profile, googleAvatar, signOut, updateProfile, uploadAvatar } = useAuth();
+  const {
+    profile,
+    googleAvatar,
+    signOut,
+    updateProfile,
+    uploadAvatar,
+    fetchHistory,
+    history
+  } = useAuth();
   const {
     liveRoom, liveMembers, friends, pendingInvites, loadingRoom,
     searchByEmail, sendFriendRequest, respondFriendRequest,
@@ -37,8 +47,26 @@ export default function LobbyScreen({ player, onUpdatePlayer, onStartRaid }) {
   const [joinCode, setJoinCode] = useState("");
 
   // ── UI state ─────────────────────────────────────────────────
-  const [activePanel, setActivePanel] = useState("rooms"); // "rooms" | "friends"
+  const [activePanel, setActivePanel] = useState("rooms"); // "rooms" | "friends" | "shop" | "history"
+  useEffect(() => {
+    if (activePanel === "history" && profile) {
+      fetchHistory(profile.id);
+    }
+  }, [activePanel, profile]);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  useEffect(() => {
+    if (historyOpen && profile) {
+      fetchHistory(profile.id);
+    }
+  }, [historyOpen, profile]);
+  const [buyNotification, setBuyNotification] = useState(null);
+  useEffect(() => {
+    if (buyNotification) {
+      const t = setTimeout(() => setBuyNotification(null), 2500);
+      return () => clearTimeout(t);
+    }
+  }, [buyNotification]);
 
   // ── Profile edit state ───────────────────────────────────────
   const [editName, setEditName] = useState("");
@@ -191,7 +219,7 @@ export default function LobbyScreen({ player, onUpdatePlayer, onStartRaid }) {
 
       {/* ── Tab switcher ── */}
       <div style={{ width: "100%", maxWidth: 1000, display: "flex", gap: ".5rem", marginBottom: "1.25rem" }}>
-        {[["rooms", "⚔️ Raids"], ["friends", `👥 Friends${friends.filter(f => f.status === "accepted").length ? ` (${friends.filter(f => f.status === "accepted").length})` : ""}`]].map(([id, label]) => (
+        {[["rooms", "⚔️ Raids"], ["friends", `👥 Friends${friends.filter(f => f.status === "accepted").length ? ` (${friends.filter(f => f.status === "accepted").length})` : ""}`], ["shop", "🛒 Shop"], ["history", "📜 History"]].map(([id, label]) => (
           <button key={id} onClick={() => setActivePanel(id)} style={{
             fontFamily: "var(--font-heading)", fontSize: ".8rem", letterSpacing: ".1em",
             textTransform: "uppercase", padding: ".6rem 1.5rem", borderRadius: 6,
@@ -393,6 +421,27 @@ export default function LobbyScreen({ player, onUpdatePlayer, onStartRaid }) {
         </div>
       )}
 
+      {/* ── SHOP PANEL ── */}
+      {activePanel === "shop" && profile && (
+        <div style={{ width: "100%", maxWidth: 1000 }}>
+          <ShopPanel
+            profile={profile}
+            player={player}
+            onUpdatePlayer={onUpdatePlayer}
+            onBuyItem={(item) => {
+              setBuyNotification(`✅ Purchased ${item.name}!`);
+            }}
+          />
+        </div>
+      )}
+
+      {/* ── HISTORY PANEL ── */}
+      {activePanel === "history" && profile && (
+        <div style={{ width: "100%", maxWidth: 1000, maxHeight: '80vh', overflow: 'auto' }}>
+          <HistoryModal open={true} onClose={() => setActivePanel('rooms')} />
+        </div>
+      )}
+
       {/* ── Profile Edit Modal ── */}
       <Modal open={profileOpen} onClose={() => setProfileOpen(false)} maxWidth={480}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
@@ -453,7 +502,24 @@ export default function LobbyScreen({ player, onUpdatePlayer, onStartRaid }) {
           </Btn>
         </div>
       </Modal>
-
+      {buyNotification && (
+        <div style={{
+          position: "fixed",
+          bottom: "20px",
+          right: "20px",
+          background: "var(--bg-elevated)",
+          border: "1px solid var(--accent-gold)",
+          color: "var(--accent-gold)",
+          padding: "0.75rem 1.2rem",
+          borderRadius: "8px",
+          fontFamily: "var(--font-heading)",
+          fontSize: "0.85rem",
+          boxShadow: "0 0 15px rgba(255,215,0,0.3)",
+          zIndex: 9999
+        }}>
+          {buyNotification}
+        </div>
+      )}
     </div>
   );
 }

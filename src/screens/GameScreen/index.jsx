@@ -14,6 +14,7 @@ import FlashcardTab from "./tabs/FlashcardTab";
 import NotesTab from "./tabs/NotesTab";
 import AiTab from "./tabs/AiTab";
 import { usePhoneStatusListener } from "../../hooks/usePhoneStatusListener";
+import { supabase } from "../../lib/supabase";
 
 // ── Dynamic Boss HP formula ────────────────────────────────────────────────────
 // Boss Max HP = Session Duration (minutes) × Number of Players × 20
@@ -23,9 +24,10 @@ function calcBossMaxHP(durationMinutes, playerCount) {
 
 export default function GameScreen({ player, room, onUpdatePlayer, onGoLobby }) {
   const { push, multiplayer } = useApp();
-  const { profile } = useAuth();
+  const { profile, updateProfile, fetchHistory } = useAuth();
   const liveMembers = multiplayer?.liveMembers ?? [];
   const liveRoom    = multiplayer?.liveRoom ?? room;
+  const [sessionStartTime, setSessionStartTime] = useState(Date.now());
 
   const { getPhoneStatus } = usePhoneStatusListener(liveRoom?.id);
 
@@ -222,32 +224,73 @@ export default function GameScreen({ player, room, onUpdatePlayer, onGoLobby }) 
   );
 
   // ── End session ───────────────────────────────────────────────────────────────
-  const endSession = useCallback(
-    (reason) => {
-      sessionRunningRef.current = false;
-      setSessionRunning(false);
-      clearInterval(gameLoopRef.current);
-      clearTimeout(engageTimeoutRef.current);
-      clearInterval(engageIntervalRef.current);
-      setEngageOpen(false);
+  const endSession = useCallback(async (reason) => {
+    sessionRunningRef.current = false;
+    setSessionRunning(false);
+    clearInterval(gameLoopRef.current);
+    clearTimeout(engageTimeoutRef.current);
+    clearInterval(engageIntervalRef.current);
+    setEngageOpen(false);
 
-      if (reason === "defeat") {
-        const px = Math.floor(totalDamageRef.current / 10);
-        addXP(px);
-        setDefeatOpen(true);
-      } else {
-        const xpE    = 100 + Math.floor(totalDamageRef.current / 5);
-        const coinsE = 20 + Math.floor((bossMaxHP - Math.max(0, bossHPRef.current)) / 50);
-        addXP(xpE);
-        onUpdatePlayer((p) => ({ ...p, coins: p.coins + coinsE }));
-        setXpReward(xpE);
-        setCoinsReward(coinsE);
-        setVictoryOpen(true);
-        if (reason === "victory") triggerBossState("defeated", 999999);
+    const actualDurationSeconds = Math.floor((Date.now() - sessionStartTime) / 1000);
+    const actualMinutes = Math.floor(actualDurationSeconds / 60);
+    const xpRewardCalc = (actualMinutes * 10) + 50;
+    const coinsRewardCalc = actualMinutes + 50;
+    const squadRoster = squad.map(p => ({name: p.name, avatar: p.avatar}));
+    const objectivesCleared = quests.filter(q => q.done).map(q => q.text);
+
+    // Log session to history (assume table exists - ignore 400 if not run)
+    if (profile && !profile.is_guest) {
+      try {
+        await supabase.from('ff_session_history').insert({
+          user_id: profile.id,
+          room_id: liveRoom?.id || room.id,
+          room_name: liveRoom?.name || room.name,
+          duration_minutes: sessionDuration,
+          actual_seconds: actualDurationSeconds,
+          squad_size: totalPlayerCount,
+          victory: reason === 'victory',
+          objectives_cleared: objectivesCleared,
+          xp_reward: xpRewardCalc,
+          coins_reward: coinsRewardCalc,
+        });
+         if (fetchHistory) {
+      fetchHistory(profile.id);
+    }
+      } catch (err) {
+        console.error('❌ Session insert failed:', err);
       }
-    },
-    [addXP, onUpdatePlayer, bossMaxHP, triggerBossState]
-  );
+    }
+
+    if (reason === "defeat") {
+      const px = Math.floor(totalDamageRef.current / 10);
+      addXP(px);
+      setDefeatOpen(true);
+    } else {
+      // Apply calculated rewards via local player first, then profile
+      onUpdatePlayer((p) => ({
+        ...p, 
+        xp: p.xp + xpRewardCalc,
+        coins: p.coins + coinsRewardCalc,
+        level: Math.floor((p.xp + xpRewardCalc) / 1000) + 1,
+        xp_to_next: 1000
+      }));
+      
+      if (profile && !profile.is_guest) {
+        const updates = {
+          xp: profile.xp + xpRewardCalc,
+          coins: profile.coins + coinsRewardCalc,
+          level: Math.floor((profile.xp + xpRewardCalc) / 1000) + 1,
+          xp_to_next: 1000
+        };
+        await updateProfile(updates);
+      }
+      setXpReward(xpRewardCalc);
+      setCoinsReward(coinsRewardCalc);
+      setVictoryOpen(true);
+      if (reason === "victory") triggerBossState("defeated", 999999);
+    }
+  }, [addXP, sessionStartTime, sessionDuration, liveRoom, room, totalPlayerCount, profile, squad, quests, onUpdatePlayer, updateProfile, triggerBossState]);
 
   // ── Game loop ─────────────────────────────────────────────────────────────────
   useEffect(() => {

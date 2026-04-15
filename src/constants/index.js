@@ -104,3 +104,10 @@ export const DEFAULT_QUESTS = [
   { text: "Stay focused for 10 minutes", done: false },
   { text: "Generate session notes", done: false },
 ];
+
+export const SHOP_ITEMS = [
+  { id: 'wizard', name: 'Wizard', type: 'skin', emoji: '🧙', price: 100, description: 'Mystic spellcaster' },
+  { id: 'automaton', name: 'Automaton', type: 'skin', emoji: '🤖', price: 150, description: 'Mechanical warrior' },
+  { id: 'elf', name: 'Elf Archer', type: 'skin', emoji: '🧝', price: 75, description: 'Swift forest guardian' },
+  { id: 'streak_freeze', name: 'Streak Freeze', type: 'consumable', emoji: '⏸️', price: 50, description: 'Pause streak timer 60s' },
+];

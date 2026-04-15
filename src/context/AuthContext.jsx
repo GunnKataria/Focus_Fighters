@@ -8,6 +8,8 @@ export function AuthProvider({ children }) {
   const [session, setSession]         = useState(undefined);
   const [authLoading, setAuthLoading] = useState(true);
   const [profile, setProfile]         = useState(null);
+  const [inventory, setInventory]     = useState([]);
+  const [history, setHistory]         = useState([]);
 
   // ── Load or create profile from Supabase ─────────────────────
   const loadProfile = async (user) => {
@@ -37,6 +39,7 @@ export function AuthProvider({ children }) {
         photo_url:    user.user_metadata?.avatar_url ?? null,
         email:        user.email ?? null,
         is_guest:     false,
+        xp: 0, coins: 0, level: 1, xp_to_next: 100,
       };
       const { data: upserted, error: upsertError } = await supabase
         .from("ff_profiles")
@@ -46,7 +49,7 @@ export function AuthProvider({ children }) {
 
       if (upsertError) {
         console.error("Profile upsert error:", upsertError);
-        setProfile({ ...newProfile, xp: 0, coins: 0, level: 1, xp_to_next: 100 });
+        setProfile(newProfile);
       } else {
         setProfile(upserted);
       }
@@ -213,17 +216,69 @@ export function AuthProvider({ children }) {
 
   const isLoggedIn = !!session || !!profile;
 
+ const fetchInventory = async (userId) => {
+  if (!userId || profile?.is_guest) {
+    setInventory([]);
+    return;
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('ff_user_inventory')
+      .select(`
+        *,
+        ff_shop_items(name, type, emoji)
+      `)
+      .eq('user_id', userId)
+      .order('purchased_at', { ascending: false });
+
+    if (error) {
+      console.error('Inventory fetch error:', error);
+      setInventory([]);
+      return;
+    }
+
+    setInventory(data || []);
+  } catch (err) {
+    console.error('Inventory fetch error:', err);
+    setInventory([]);
+  }
+};
+
+  const fetchHistory = async (userId) => {
+    if (!userId || profile?.is_guest) {
+      setHistory([]);
+      return;
+    }
+    try {
+      const { data } = await supabase
+        .from('ff_session_history')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(50);
+      setHistory(data || []);
+    } catch (err) {
+      console.error('History fetch error:', err);
+      setHistory([]);
+    }
+  };
+
   return (
     <AuthContext.Provider value={{
       session,
       authLoading,
       profile,
+      inventory,
+      history,
       isLoggedIn,
       signInWithGoogle,
       signInAsGuest,
       signOut,
       updateProfile,
       uploadAvatar,
+      fetchInventory,
+      fetchHistory,
       // convenience shortcuts
       googleAvatar: profile?.photo_url ?? null,
       googleName:   profile?.display_name ?? null,
